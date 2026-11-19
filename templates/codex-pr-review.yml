@@ -22,8 +22,8 @@ jobs:
       TS_AUDIENCE: ${{ secrets.TS_AUDIENCE }}
     # Optional:
     # with:
-    #   model: ""
-    #   effort: medium
+    #   model: gpt-6.2-sol   # default
+    #   effort: high         # default
     #   max-priority: 2
     #   extra-instructions: |
     #     Parsers must never panic on malformed input files.

@@ -8,11 +8,11 @@ on:
       model:
         description: Codex model. Empty uses the Codex CLI default.
         type: string
-        default: ""
+        default: gpt-6.2-sol
       effort:
-        description: Reasoning effort (minimal, low, medium, high, xhigh). Empty uses the default.
+        description: Reasoning effort (none, minimal, low, medium, high, xhigh). Empty uses the model default, which can be none.
         type: string
-        default: ""
+        default: high
       language:
         description: Language for review text.
         type: string

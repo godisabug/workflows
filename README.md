@@ -54,8 +54,8 @@ runner 以临时节点加入，不接受 tailnet DNS，任务结束后退出。�
 
 | 参数 | 默认 | 说明 |
 |---|---|---|
-| `model` | 空（Codex CLI 默认） | Codex 模型 |
-| `effort` | 空（默认） | 推理强度：minimal / low / medium / high / xhigh |
+| `model` | `gpt-6.2-sol` | Codex 模型；传空字符串用 Codex CLI 默认 |
+| `effort` | `high` | 推理强度：none / minimal / low / medium / high / xhigh；传空字符串用模型默认（可能是 none，审查质量差） |
 | `language` | 简体中文 | 审查内容的语言 |
 | `max-priority` | 2 | 发出 P0 到该优先级的问题 |
 | `review-bots` | false | 也审查机器人 PR；Dependabot 触发的运行读的是 Dependabot secrets，还要在那里再配一份 key |
