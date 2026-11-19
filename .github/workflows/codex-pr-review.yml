@@ -29,9 +29,23 @@ on:
         description: Repository-specific review instructions appended to the prompt.
         type: string
         default: ""
+      tailscale-tags:
+        description: Tags for the ephemeral Tailscale node (only used when TS_OAUTH_CLIENT_ID is set).
+        type: string
+        default: tag:ci
     secrets:
       OPENAI_API_KEY:
+        description: API key for OpenAI, or for the gateway named in RESPONSES_API_ENDPOINT.
         required: true
+      RESPONSES_API_ENDPOINT:
+        description: Full Responses API URL of an OpenAI-compatible gateway, e.g. http://100.x.y.z:8080/v1/responses. Empty uses api.openai.com.
+        required: false
+      TS_OAUTH_CLIENT_ID:
+        description: Tailscale workload identity federation client ID. Set it to join the tailnet before calling Codex.
+        required: false
+      TS_AUDIENCE:
+        description: Tailscale workload identity federation audience.
+        required: false
 
 permissions:
   contents: read
@@ -51,6 +65,7 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
+      id-token: write # Tailscale workload identity federation
     concurrency:
       group: codex-pr-review-${{ github.repository }}-${{ github.event.pull_request.number }}
       cancel-in-progress: true
@@ -71,12 +86,49 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: git fetch --no-tags origin "$BASE_SHA"
 
+      - name: Detect optional settings
+        id: opts
+        env:
+          TS_CLIENT_ID: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          ENDPOINT: ${{ secrets.RESPONSES_API_ENDPOINT }}
+        run: |
+          echo "tailscale=$([ -n "$TS_CLIENT_ID" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "endpoint=$([ -n "$ENDPOINT" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      # Join the tailnet as an ephemeral, tagged node so a gateway that is only
+      # reachable over Tailscale can be used. Must run before Codex drops sudo.
+      - name: Connect to Tailscale
+        if: steps.opts.outputs.tailscale == 'true'
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          audience: ${{ secrets.TS_AUDIENCE }}
+          tags: ${{ inputs.tailscale-tags }}
+          args: --accept-dns=false
+
+      # Fail fast with a clear message instead of a Codex retry loop. Any HTTP
+      # status (401 for an empty request is normal) means the gateway is reachable.
+      - name: Check Responses API endpoint
+        if: steps.opts.outputs.endpoint == 'true'
+        env:
+          ENDPOINT: ${{ secrets.RESPONSES_API_ENDPOINT }}
+          TS_TAGS: ${{ inputs.tailscale-tags }}
+        run: |
+          code=$(curl -sS -m 20 -o /dev/null -w '%{http_code}' -X POST "$ENDPOINT" \
+            -H 'content-type: application/json' -d '{}' || true)
+          if [ -z "$code" ] || [ "$code" = "000" ]; then
+            echo "::error::RESPONSES_API_ENDPOINT is not reachable from the runner. If it is a tailnet address, check TS_OAUTH_CLIENT_ID/TS_AUDIENCE and that the tailnet policy lets $TS_TAGS reach it."
+            exit 1
+          fi
+          echo "Endpoint reachable (HTTP $code for an empty request)."
+
       # Must stay the last step: drop-sudo is irreversible for the job.
       - name: Run Codex
         id: codex
         uses: openai/codex-action@v1
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          responses-api-endpoint: ${{ secrets.RESPONSES_API_ENDPOINT }}
           model: ${{ inputs.model }}
           effort: ${{ inputs.effort }}
           permission-profile: ":workspace"
