@@ -75,7 +75,7 @@ jobs:
       # Check out the PR head (not the merge commit) so the line numbers Codex
       # reads match the right-hand side of the PR diff.
       - name: Check out PR head
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
@@ -99,7 +99,7 @@ jobs:
       # reachable over Tailscale can be used. Must run before Codex drops sudo.
       - name: Connect to Tailscale
         if: steps.opts.outputs.tailscale == 'true'
-        uses: tailscale/github-action@v4
+        uses: tailscale/github-action@064b10558093f38325e838ddea35486bdc6b1d5c # v4.4.0
         with:
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
           audience: ${{ secrets.TS_AUDIENCE }}
@@ -125,7 +125,7 @@ jobs:
       # Must stay the last step: drop-sudo is irreversible for the job.
       - name: Run Codex
         id: codex
-        uses: openai/codex-action@v1
+        uses: openai/codex-action@306c6a196a99dcc6582530c396a19d2672d5e9ec # v1.14
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
           responses-api-endpoint: ${{ secrets.RESPONSES_API_ENDPOINT }}
@@ -225,7 +225,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Post GitHub review
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           CODEX_FINAL_MESSAGE: ${{ needs.review.outputs.final-message }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
