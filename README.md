@@ -39,6 +39,8 @@
    ```
 
 2. 在 Tailscale 管理后台 Trust credentials 新建 OpenID Connect 凭据：Issuer 选 GitHub，Subject 填 `repo:godisabug/*:pull_request`，scope 选 `auth_keys`（可写），标签 `tag:ci`。
+
+   GitHub 对 2026-07-15 之后新建的仓库强制使用不可变的 OIDC subject：`repo:godisabug@<账号 ID>/<仓库>@<仓库 ID>:pull_request`，改不回旧格式。这类仓库要再建一个凭据，Subject 填 `repo:godisabug@<账号 ID>/*:pull_request`，然后把它的 Client ID 和 Audience 设到这些仓库。仓库用的是哪种格式，看 `gh api repos/godisabug/<仓库>/actions/oidc/customization/sub` 返回的 `sub_claim_prefix`。格式不匹配时，"Connect to Tailscale" 这一步会报 `token exchange failed with status 403`。
 3. 把凭据的 Client ID 和 Audience 设为 secret `TS_OAUTH_CLIENT_ID`、`TS_AUDIENCE`。
 
 runner 以临时节点加入，不接受 tailnet DNS，任务结束后退出。工作流会在调用 Codex 前先探测网关；连不上时直接失败并给出提示，不会让 Codex 反复重试。调用方模板里的 `id-token: write` 就是给这一步用的，没配 Tailscale 时不会被用到。
