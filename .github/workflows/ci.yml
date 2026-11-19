@@ -15,9 +15,16 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
+      # actionlint's bundled metadata for openai/codex-action@v1 predates the
+      # permission-profile input (added in codex-action v1.10).
       - name: Lint workflows
         uses: docker://rhysd/actionlint:1.7.12
         with:
-          args: -color .github/workflows/codex-pr-review.yml .github/workflows/ci.yml templates/codex-pr-review.yml
+          args: >-
+            -color
+            -ignore=permission-profile
+            .github/workflows/codex-pr-review.yml
+            .github/workflows/ci.yml
+            templates/codex-pr-review.yml
       - name: Test post-review script
         run: node --test test/*.test.mjs
