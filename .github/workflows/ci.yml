@@ -26,5 +26,7 @@ jobs:
             .github/workflows/codex-pr-review.yml
             .github/workflows/ci.yml
             templates/codex-pr-review.yml
+      - name: Lint setup script
+        run: shellcheck scripts/*.sh
       - name: Test post-review script
         run: node --test test/*.test.mjs

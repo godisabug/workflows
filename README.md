@@ -6,17 +6,35 @@
 
 `.github/workflows/codex-pr-review.yml`：PR 打开、更新、重新打开或转为 ready 时，用 [openai/codex-action](https://github.com/openai/codex-action) 让 Codex 审查这个 PR 引入的改动，然后以 GitHub review 的形式发回 PR。能定位到 diff 行的问题发成行内评论，定位不到的写在 review 正文里。
 
-### 接入一个仓库
+### 接入仓库
 
-1. 在仓库里设置 secret `OPENAI_API_KEY`：
+个人账号没有账号级 secret，每个仓库都要单独配置，由 [`scripts/setup-repo.sh`](scripts/setup-repo.sh) 一条命令完成。
+
+1. 一次性：把 secret 的值写进本机文件（不进任何仓库），每行 `名字=值`，只有 `OPENAI_API_KEY` 必填，其余见下一节：
 
    ```sh
-   gh secret set OPENAI_API_KEY -R godisabug/<仓库名>
+   mkdir -p ~/.config/codex-pr-review
+   install -m 600 /dev/null ~/.config/codex-pr-review/secrets.env
+   $EDITOR ~/.config/codex-pr-review/secrets.env
    ```
 
-   个人账号没有账号级 secret，每个仓库都要单独设置一次。
+   ```sh
+   OPENAI_API_KEY=sk-...
+   RESPONSES_API_ENDPOINT=http://100.x.y.z:8080/v1/responses
+   TS_OAUTH_CLIENT_ID=...
+   TS_AUDIENCE=...
+   ```
 
-2. 把 [`templates/codex-pr-review.yml`](templates/codex-pr-review.yml) 复制到该仓库的 `.github/workflows/codex-pr-review.yml`。
+2. 接入：
+
+   ```sh
+   scripts/setup-repo.sh <仓库名>...   # 指定仓库
+   scripts/setup-repo.sh --all         # 所有未归档、非 fork 的仓库
+   ```
+
+   每个仓库做三件事，已做过的跳过：启用不可变 OIDC subject；设置还没有的 secret；默认分支上没有 `.github/workflows/codex-pr-review.yml` 时，把 [`templates/codex-pr-review.yml`](templates/codex-pr-review.yml) 直接提交上去。可以重复运行，有了新仓库再跑一次 `--all` 即可。先加 `-n` 看会改什么；换了 key 用 `--rotate-secrets` 覆盖所有仓库里的旧值。
+
+工作流只提交到默认分支。PR 平时合进别的分支（如 `dev`）时，要把它合到那个分支上，那里的 PR 才会触发审查。私有仓库的运行消耗账号的 Actions 分钟数。
 
 ### 改用 OpenAI 兼容网关（如 sub2api）
 
@@ -40,7 +58,7 @@
 
 2. 在 Tailscale 管理后台 Trust credentials 新建 OpenID Connect 凭据：Issuer 选 GitHub，Subject 填 `repo:godisabug@<账号 ID>/*:pull_request`，scope 选 `auth_keys`（可写），标签 `tag:ci`。
 
-   这是 GitHub 的不可变 OIDC subject 格式，带账号和仓库的数字 ID，仓库或账号改名后也不会被冒用。2026-07-15 之后新建的仓库强制使用它；更早的仓库要先启用：
+   这是 GitHub 的不可变 OIDC subject 格式，带账号和仓库的数字 ID，仓库或账号改名后也不会被冒用。2026-07-15 之后新建的仓库强制使用它；更早的仓库要先启用（`setup-repo.sh` 会自动做）：
 
    ```sh
    gh api -X PUT repos/godisabug/<仓库>/actions/oidc/customization/sub \

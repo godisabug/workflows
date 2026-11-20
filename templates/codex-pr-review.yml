@@ -1,6 +1,5 @@
-# Copy to .github/workflows/codex-pr-review.yml in each repository.
-# Required secret: OPENAI_API_KEY. Optional: RESPONSES_API_ENDPOINT,
-# TS_OAUTH_CLIENT_ID, TS_AUDIENCE (see the workflows repo README).
+# Codex reviews each PR; see https://github.com/godisabug/workflows#codex-pr-审查
+# Installed by scripts/setup-repo.sh in that repository, which also sets the secrets.
 name: Codex PR review
 
 on:
